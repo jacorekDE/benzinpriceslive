@@ -552,19 +552,96 @@
 
     /* ── Responsive ─────────────────────────────────────── */
     @media (max-width: 768px) {
-      header { padding: 0 16px; }
-      .header-inner { height: 60px; }
-      .header-title { display: none; }
-      main { padding: 20px 14px 48px; }
-      .price-cards { grid-template-columns: 1fr 1fr; gap: 14px; }
-      .card-price { font-size: 2.6rem; }
+      /* Header — single compact row */
+      header { padding: 0 14px; }
+      .header-inner {
+        height: 58px;
+        flex-wrap: nowrap;
+        gap: 10px;
+      }
+      .header-left { gap: 9px; flex-shrink: 1; min-width: 0; }
+      .header-badge { font-size: 0.85rem; padding: 5px 10px; flex-shrink: 0; }
+      .header-title { font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .header-subtitle { font-size: 0.66rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+      .header-right { flex-shrink: 0; gap: 0; }
+      .countdown-text { display: none; }
+      .live-pill {
+        padding: 5px 10px;
+        font-size: 0.75rem;
+        white-space: nowrap;
+      }
+
+      /* Main */
+      main { padding: 16px 12px 48px; }
+
+      /* Section headers — stack on mobile */
+      .section-header { flex-direction: column; gap: 2px; margin-bottom: 12px; }
+      .section-meta { font-size: 0.72rem; }
+
+      /* Price cards — side by side, compact */
+      .price-cards { grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+      .price-card { padding: 18px 14px 16px; border-radius: 14px; }
+      .card-label { font-size: 0.65rem; margin-bottom: 2px; }
+      .card-product { font-size: 0.8rem; margin-bottom: 12px; }
+      .card-price { font-size: 2.4rem; letter-spacing: -1.5px; }
+      .card-unit { font-size: 0.75rem; margin-bottom: 10px; }
+      .card-divider { margin: 10px 0; }
+      .card-change { font-size: 0.75rem; }
+      .card-stations { font-size: 0.7rem; margin-top: 4px; }
+      .card-glow { width: 120px; height: 120px; top: -40px; right: -40px; }
+
+      /* Chart */
+      .chart-card { padding: 16px 14px; border-radius: 14px; margin-bottom: 16px; }
+      .chart-wrapper { height: 220px; }
+
+      /* Table card */
+      .table-card { padding: 16px 14px; border-radius: 14px; margin-bottom: 16px; }
+
+      /* Table controls — search full width, sort+button on one row */
+      .table-controls {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        grid-template-rows: auto auto;
+        gap: 8px;
+      }
+      .search-input {
+        grid-column: 1 / -1;
+        min-width: unset;
+        font-size: 0.85rem;
+        padding: 9px 12px;
+      }
+      .sort-select {
+        font-size: 0.82rem;
+        padding: 8px 10px;
+      }
+      .refresh-btn {
+        font-size: 0.82rem;
+        padding: 8px 14px;
+        white-space: nowrap;
+      }
+
+      /* Station table — scrollable, hide last updated */
+      .station-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+      .station-table th, .station-table td { padding: 10px 10px; }
       .station-table th:nth-child(4),
       .station-table td:nth-child(4) { display: none; }
-      .countdown-text { display: none; }
-    }
+      .station-name { font-size: 0.83rem; }
+      .station-city { font-size: 0.72rem; }
+      .fuel-badge { font-size: 0.8rem; padding: 3px 9px; }
 
-    @media (max-width: 480px) {
-      .price-cards { grid-template-columns: 1fr; }
+      /* History card */
+      .history-card { padding: 16px 14px; border-radius: 14px; margin-bottom: 16px; }
+      .history-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+      .history-table th, .history-table td { padding: 9px 10px; font-size: 0.78rem; }
+      /* Hide "Ændring" columns on small screens to save space */
+      .history-table th:nth-child(3),
+      .history-table td:nth-child(3),
+      .history-table th:nth-child(5),
+      .history-table td:nth-child(5),
+      .history-table th:nth-child(6),
+      .history-table td:nth-child(6) { display: none; }
+
+      footer { font-size: 0.72rem; padding: 20px 16px; }
     }
   </style>
 </head>
@@ -657,8 +734,10 @@
       </select>
       <button class="refresh-btn" id="refreshBtn" onclick="fetchPrices()">↻ Opdater nu</button>
     </div>
-    <div id="stationTableContainer">
-      <div style="color:var(--muted);padding:32px;text-align:center">Indlæser stationer…</div>
+    <div class="station-table-wrap">
+      <div id="stationTableContainer">
+        <div style="color:var(--muted);padding:32px;text-align:center">Indlæser stationer…</div>
+      </div>
     </div>
   </div>
 
@@ -668,9 +747,11 @@
       <span class="section-title">Prislog</span>
       <button class="clear-btn" onclick="clearHistory()">Ryd historik</button>
     </div>
-    <div id="historyTableContainer">
-      <div style="color:var(--muted);padding:24px;text-align:center;font-size:0.88rem">
-        Ingen historik endnu — prislog opbygges automatisk ved hver opdatering.
+    <div class="history-table-wrap">
+      <div id="historyTableContainer">
+        <div style="color:var(--muted);padding:24px;text-align:center;font-size:0.88rem">
+          Ingen historik endnu — prislog opbygges automatisk ved hver opdatering.
+        </div>
       </div>
     </div>
   </div>
