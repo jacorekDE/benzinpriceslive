@@ -745,7 +745,7 @@
   <div class="history-card">
     <div class="section-header" style="margin-bottom:20px">
       <span class="section-title">Prislog</span>
-      <button class="clear-btn" onclick="clearHistory()">Ryd historik</button>
+      <span class="section-meta">Opdateres med GitHub Actions · maks. 2000 poster</span>
     </div>
     <div class="history-table-wrap">
       <div id="historyTableContainer">
@@ -764,18 +764,18 @@
 
 <script>
 /* ── Config ──────────────────────────────────────────────── */
-// data.json is refreshed hourly by GitHub Actions (works on Pages + locally via server.py)
+// data.json + history.json are refreshed hourly by GitHub Actions
 const API_URL      = 'data.json';
-const HISTORY_KEY  = 'ok_price_history_cph_v2';
-const MAX_HISTORY  = 500;
+const HISTORY_URL  = 'history.json';
 const REFRESH_MS   = 60 * 60 * 1000; // 1 hour
 const CPH_MIN      = 1000;
 const CPH_MAX      = 3999;
 
 /* ── State ──────────────────────────────────────────────── */
-let allStations  = [];
-let priceChart   = null;
-let nextRefresh  = null;
+let allStations    = [];
+let priceHistory   = []; // loaded from history.json — shared across all devices
+let priceChart     = null;
+let nextRefresh    = null;
 let countdownTimer = null;
 
 /* ── Utilities ──────────────────────────────────────────── */
@@ -822,33 +822,14 @@ function countUp(el, target, duration = 800) {
   requestAnimationFrame(step);
 }
 
-/* ── Local storage history ──────────────────────────────── */
-function loadHistory() {
-  try { return JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]'); }
-  catch { return []; }
-}
-
-function saveHistory(arr) {
-  localStorage.setItem(HISTORY_KEY, JSON.stringify(arr.slice(-MAX_HISTORY)));
-}
-
-function addHistoryEntry(benzin, diesel, count) {
-  const history = loadHistory();
-  const ts = new Date().toISOString();
-  const last = history[history.length - 1];
-  if (last) {
-    const diffSec = (new Date(ts) - new Date(last.timestamp)) / 1000;
-    if (diffSec < 120 && last.benzin === benzin && last.diesel === diesel) return;
+/* ── Remote history (history.json — cross-device) ───────── */
+async function fetchHistory() {
+  try {
+    const res = await fetch(HISTORY_URL + '?t=' + Date.now());
+    if (res.ok) priceHistory = await res.json();
+  } catch (e) {
+    priceHistory = [];
   }
-  history.push({ timestamp: ts, benzin, diesel, stationCount: count });
-  saveHistory(history);
-}
-
-function clearHistory() {
-  if (!confirm('Slet al prishistorik?')) return;
-  localStorage.removeItem(HISTORY_KEY);
-  renderChart();
-  renderHistory();
 }
 
 /* ── UI helpers ─────────────────────────────────────────── */
@@ -893,7 +874,8 @@ async function fetchPrices() {
   hideError();
 
   try {
-    const res = await fetch(API_URL);
+    // Fetch prices and history in parallel
+    const [res] = await Promise.all([fetch(API_URL), fetchHistory()]);
     if (!res.ok) throw new Error(`Server svarede med HTTP ${res.status}`);
     const data = await res.json();
 
@@ -905,14 +887,12 @@ async function fetchPrices() {
     const avgB = avgPrice(stations, '95');
     const avgD = avgPrice(stations, 'diesel');
 
-    addHistoryEntry(avgB, avgD, stations.length);
-
     renderCards(avgB, avgD, stations);
     filterStations();
     renderChart();
     renderHistory();
 
-    const ts = formatDateTime(new Date().toISOString());
+    const ts = formatDateTime(data.fetched_at || new Date().toISOString());
     document.getElementById('lastUpdatedText').textContent = `Sidst opdateret ${ts}`;
     setLive('active', `${stations.length} stationer`);
     startCountdown();
@@ -925,7 +905,7 @@ async function fetchPrices() {
       : '⚠ ' + err.message);
     setLive('error', 'Fejl');
 
-    // Still render cached history
+    // Still render whatever history we have
     renderChart();
     renderHistory();
   } finally {
@@ -935,7 +915,7 @@ async function fetchPrices() {
 
 /* ── Render cards ───────────────────────────────────────── */
 function renderCards(avgB, avgD, stations) {
-  const history = loadHistory();
+  const history = priceHistory;
   const prev = history.length >= 2 ? history[history.length - 2] : null;
 
   function changeHTML(cur, prevVal) {
@@ -1065,7 +1045,7 @@ function filterStations() {
 
 /* ── Chart ──────────────────────────────────────────────── */
 function renderChart() {
-  const history = loadHistory();
+  const history = priceHistory;
   const canvas  = document.getElementById('priceChart');
   const empty   = document.getElementById('chartEmpty');
 
@@ -1173,7 +1153,7 @@ function renderChart() {
 
 /* ── History table ──────────────────────────────────────── */
 function renderHistory() {
-  const history = loadHistory().slice().reverse();
+  const history = priceHistory.slice().reverse();
   const cont    = document.getElementById('historyTableContainer');
 
   if (!history.length) {
@@ -1221,11 +1201,7 @@ function renderHistory() {
 }
 
 /* ── Init ───────────────────────────────────────────────── */
-// Render cached data immediately
-renderChart();
-renderHistory();
-
-// Fetch live data
+// Fetch prices + history (history.json is cross-device, persists in git)
 fetchPrices();
 
 // Auto-refresh every hour
