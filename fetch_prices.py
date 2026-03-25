@@ -12,15 +12,21 @@ from datetime import datetime, timezone
 OK_API_URL   = "https://mobility-prices.ok.dk/api/v1/fuel-prices"
 DATA_FILE    = "data.json"
 HISTORY_FILE = "history.json"
-CPH_MIN, CPH_MAX = 1000, 3999
-MAX_HISTORY  = 2000  # ~83 days at hourly intervals
+CPH_MIN, CPH_MAX  = 1000, 3999
+EXTRA_POSTCODES   = {6000, 7000, 7080}  # Kolding, Fredericia, Taulov/Børkop
+MAX_HISTORY       = 2000  # ~83 days at hourly intervals
+
+
+def is_included(station):
+    pc = int(station.get("postal_code") or 0)
+    return (CPH_MIN <= pc <= CPH_MAX) or (pc in EXTRA_POSTCODES)
 
 
 def cph_avg(items, keyword):
     prices = [
         p["price"]
         for s in items
-        if CPH_MIN <= int(s.get("postal_code") or 0) <= CPH_MAX
+        if is_included(s)
         for p in s.get("prices", [])
         if keyword.lower() in p["product_name"].lower()
     ]
@@ -48,7 +54,7 @@ def main():
     # ── Compute CPH averages and update history.json ──────────────────────────
     avg_benzin = cph_avg(items, "95")
     avg_diesel = cph_avg(items, "diesel")
-    cph_count  = sum(1 for s in items if CPH_MIN <= int(s.get("postal_code") or 0) <= CPH_MAX)
+    cph_count  = sum(1 for s in items if is_included(s))
 
     try:
         with open(HISTORY_FILE) as f:

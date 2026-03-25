@@ -653,7 +653,7 @@
       <div class="header-badge">OK</div>
       <div>
         <div class="header-title">Live Benzinpriser</div>
-        <div class="header-subtitle">København &amp; omegn · postnr. 1000–3999</div>
+        <div class="header-subtitle">København · Kolding · Fredericia &amp; omegn</div>
       </div>
     </div>
     <div class="header-right">
@@ -724,7 +724,7 @@
     </div>
     <div class="table-controls">
       <input class="search-input" type="search" id="searchInput"
-        placeholder="🔍  Søg på adresse eller by…" oninput="filterStations()" />
+        placeholder="🔍  Søg på adresse, by eller postnr…" oninput="filterStations()" />
       <select class="sort-select" id="sortSelect" onchange="filterStations()">
         <option value="city">Sorter: By A→Z</option>
         <option value="benzin_asc">Benzin: billigst først</option>
@@ -767,9 +767,11 @@
 // data.json + history.json are refreshed hourly by GitHub Actions
 const API_URL      = 'data.json';
 const HISTORY_URL  = 'history.json';
-const REFRESH_MS   = 60 * 60 * 1000; // 1 hour
-const CPH_MIN      = 1000;
-const CPH_MAX      = 3999;
+const REFRESH_MS      = 60 * 60 * 1000; // 1 hour
+const CPH_MIN         = 1000;
+const CPH_MAX         = 3999;
+// Extra postal codes: Kolding (6000), Fredericia + Taulov area (7000, 7080)
+const EXTRA_POSTCODES = new Set([6000, 7000, 7080]);
 
 /* ── State ──────────────────────────────────────────────── */
 let allStations    = [];
@@ -803,7 +805,8 @@ function formatDateTime(iso) {
 }
 
 function isCPH(s) {
-  return s.postal_code >= CPH_MIN && s.postal_code <= CPH_MAX;
+  return (s.postal_code >= CPH_MIN && s.postal_code <= CPH_MAX)
+      || EXTRA_POSTCODES.has(s.postal_code);
 }
 
 /* ── Count-up animation ─────────────────────────────────── */
